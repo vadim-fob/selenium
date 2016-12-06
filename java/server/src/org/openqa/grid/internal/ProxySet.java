@@ -46,8 +46,14 @@ public class ProxySet implements Iterable<RemoteProxy> {
   private static final Logger log = Logger.getLogger(ProxySet.class.getName());
   private volatile boolean throwOnCapabilityNotPresent = true;
 
+  private volatile boolean proxyEnabled = false;
+
   public ProxySet(boolean throwOnCapabilityNotPresent) {
     this.throwOnCapabilityNotPresent = throwOnCapabilityNotPresent;
+  }
+
+  public void setProxyEnabled(boolean enableProxy) {
+    this.proxyEnabled = enableProxy;
   }
 
   /**
@@ -151,6 +157,22 @@ public class ProxySet implements Iterable<RemoteProxy> {
     log.fine("Available nodes: " + sorted);
 
     for (RemoteProxy proxy : sorted) {
+
+      // TODO:  cify queue workaround - start
+      log.info("Found proxy with id: " + proxy.getId());
+      if(proxy.getId().equalsIgnoreCase("http://10.11.13.195:4723") && !proxyEnabled){
+        log.info("proxy http://10.11.13.195:4723 is not enabled, we don't want get new session");
+        continue;
+      }
+      if(proxy.getId().equalsIgnoreCase("http://10.11.13.195:4723") && proxy.getTestSlots().get(0).getSession() != null){
+        log.info("proxy http://10.11.13.195:4723 already has session, we don't want get new");
+        continue;
+      }
+      if(proxy.getId().equalsIgnoreCase("http://10.11.13.195:4723") && proxyEnabled){
+        log.info("proxy http://10.11.13.195:4723 is enabled, let's try to get new session");
+      }
+      // TODO:  cify queue workaround - end
+
       TestSession session = proxy.getNewSession(desiredCapabilities);
       if (session != null) {
         return session;

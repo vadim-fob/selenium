@@ -16,7 +16,7 @@
 // under the License.
 
 
-package org.openqa.grid.web.servlet;
+package org.openqa.grid.web.servlet.custom;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -28,6 +28,7 @@ import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.Registry;
 import org.openqa.grid.internal.RemoteProxy;
 import org.openqa.grid.internal.TestSlot;
+import org.openqa.grid.web.servlet.RegistryBasedServlet;
 import org.openqa.selenium.remote.CapabilityType;
 
 import java.io.BufferedReader;
@@ -36,9 +37,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletException;
@@ -65,13 +66,13 @@ import javax.servlet.http.HttpServletResponse;
  * if no param is specified, all params known to the hub are returned.
  *
  */
-public class HubStatusServlet extends RegistryBasedServlet {
+public class CustomServlet extends RegistryBasedServlet {
 
-  public HubStatusServlet() {
+  public CustomServlet() {
     super(null);
   }
 
-  public HubStatusServlet(Registry registry) {
+  public CustomServlet(Registry registry) {
     super(registry);
   }
 
@@ -120,15 +121,15 @@ public class HubStatusServlet extends RegistryBasedServlet {
             res.add(entry.getKey(), entry.getValue());
           }
         }
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("newSessionRequestCount")) {
+/*        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("newSessionRequestCount")) {
           res.addProperty("newSessionRequestCount", registry.getNewSessionRequestCount());
         }
 
         if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("slotCounts")) {
           res.add("slotCounts", getSlotCounts());
-        }
+        }*/
 
-/*        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("browserSlotCounts")) {
+        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("browserSlotCounts")) {
           res.add("browserSlotCounts", getBrowserSlotCounts());
         }
 
@@ -142,7 +143,7 @@ public class HubStatusServlet extends RegistryBasedServlet {
 
         if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("runCommand")) {
           res.add("runCommand", runCommand());
-        }*/
+        }
       }
     } catch (Exception e) {
       res.remove("success");

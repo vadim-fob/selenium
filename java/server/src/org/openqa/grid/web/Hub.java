@@ -25,6 +25,7 @@ import org.openqa.grid.web.servlet.DisplayHelpServlet;
 import org.openqa.grid.web.servlet.DriverServlet;
 import org.openqa.grid.web.servlet.Grid1HeartbeatServlet;
 import org.openqa.grid.web.servlet.HubStatusServlet;
+import org.openqa.grid.web.servlet.custom.CustomServlet;
 import org.openqa.grid.web.servlet.LifecycleServlet;
 import org.openqa.grid.web.servlet.ProxyStatusServlet;
 import org.openqa.grid.web.servlet.RegistrationServlet;
@@ -109,6 +110,8 @@ public class Hub {
     handler.addServlet(ProxyStatusServlet.class.getName(), "/grid/api/proxy/*");
 
     handler.addServlet(HubStatusServlet.class.getName(), "/grid/api/hub/*");
+
+    handler.addServlet(CustomServlet.class.getName(), "/grid/api/hub/custom/*");
 
     handler.addServlet(TestSessionStatusServlet.class.getName(), "/grid/api/testsession/*");
 
