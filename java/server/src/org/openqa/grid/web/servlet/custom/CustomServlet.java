@@ -32,7 +32,6 @@ import org.openqa.grid.web.servlet.RegistryBasedServlet;
 import org.openqa.selenium.remote.CapabilityType;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -40,32 +39,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * API to query the hub config remotely.
- *
- * use the API by sending a GET to grid/api/hub/
- * with the content of the request in JSON,specifying the
- * parameters you're interesting in, for instance, to get
- * the timeout of the hub and the registered servlets :
- *
- * {"configuration":
- *      [
- *      "timeout",
- *      "servlets"
- *      ]
- * }
- *
- * alternatively you can use a query string ?configuration=timeout,servlets
- *
- * if no param is specified, all params known to the hub are returned.
- *
- */
 public class CustomServlet extends RegistryBasedServlet {
 
   public CustomServlet() {
@@ -81,8 +59,6 @@ public class CustomServlet extends RegistryBasedServlet {
       throws ServletException, IOException {
     process(request, response);
   }
-
-
 
   protected void process(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
@@ -121,28 +97,21 @@ public class CustomServlet extends RegistryBasedServlet {
             res.add(entry.getKey(), entry.getValue());
           }
         }
-/*        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("newSessionRequestCount")) {
-          res.addProperty("newSessionRequestCount", registry.getNewSessionRequestCount());
-        }
-
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("slotCounts")) {
-          res.add("slotCounts", getSlotCounts());
-        }*/
 
         if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("browserSlotCounts")) {
           res.add("browserSlotCounts", getBrowserSlotCounts());
         }
 
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("enableProxy")) {
-          res.add("enableProxy", setProxyEnabled(true));
+        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("enableNewSessionToProxy")) {
+          res.add("enableNewSessionToProxy", enableNewSessionToProxy(keysToReturn.get(1)));
         }
 
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("disableProxy")) {
-          res.add("enableProxy", setProxyEnabled(false));
+        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("disableNewSessionToProxy")) {
+          res.add("disableNewSessionToProxy", disableNewSessionToProxy(keysToReturn.get(1)));
         }
 
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("runCommand")) {
-          res.add("runCommand", runCommand());
+        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("getNewSessionDisabledProxies")) {
+          res.add("getNewSessionDisabledProxies", getNewSessionDisabledProxies());
         }
       }
     } catch (Exception e) {
@@ -154,82 +123,27 @@ public class CustomServlet extends RegistryBasedServlet {
 
   }
 
-  private JsonObject getSlotCounts() {
-    int freeSlots = 0;
-    int totalSlots = 0;
-
-    for (RemoteProxy proxy : getRegistry().getAllProxies()) {
-      for (TestSlot slot : proxy.getTestSlots()) {
-        if (slot.getSession() == null) {
-          freeSlots += 1;
-        }
-
-        totalSlots += 1;
-      }
-    }
-
+  private JsonObject enableNewSessionToProxy(String proxyId) {
+    getRegistry().getAllProxies().enableNewSessionToProxy(proxyId);
     JsonObject result = new JsonObject();
-
-    result.addProperty("free", freeSlots);
-    result.addProperty("total", totalSlots);
-
+    result.addProperty("new session enabled for proxy", proxyId);
     return result;
   }
 
-  //TODO:
-  private JsonObject runCommand() {
-
-    String status = "failed";
-    String scriptPath = "";
-    try {
-      scriptPath = new File(".").getCanonicalPath() + "/devicefarm/restart-appium-android.sh";
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    //String[] cmd = {"bash", "-c", "echo abababababa"};
-
-    System.out.println("trying to run command "+ scriptPath);
-    ProcessBuilder pb = new ProcessBuilder(scriptPath);
-    Process p = null;
-
-    try {
-      p = pb.start();
-
-    BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-    String line = null;
-
-      while ((line = reader.readLine()) != null) {
-        System.out.println(line);
-      }
-
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-    try {
-      if(p!=null &&  ! p.waitFor(30, TimeUnit.SECONDS)) {status="failed";}
-    } catch (InterruptedException e) {
-      status="failed";
-      e.printStackTrace();
-    }
-
-    if(p!=null && p.exitValue()==0) {status="ok";}
-
+  private JsonObject disableNewSessionToProxy(String proxyId) {
+    getRegistry().getAllProxies().disableNewSessionToProxy(proxyId);
     JsonObject result = new JsonObject();
-    result.addProperty("runCommand", status);
-
+    result.addProperty("new session disabled for proxy", proxyId);
     return result;
   }
 
-
-  //TODO:
-  private JsonObject setProxyEnabled(boolean enabled) {
-
-    getRegistry().getAllProxies().setProxyEnabled(enabled);
-
+  private JsonObject getNewSessionDisabledProxies(){
     JsonObject result = new JsonObject();
-    result.addProperty("proxy", enabled);
-
+    List<String> list = getRegistry().getAllProxies().getNewSessionDisabledProxies();
+    for(String proxyId : list){
+      result.addProperty("new session disabled for proxy", proxyId);
+    }
+    result.addProperty("total", list.size());
     return result;
   }
 
