@@ -24,6 +24,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.openqa.grid.common.exception.GridException;
 import org.openqa.grid.internal.Registry;
 import org.openqa.grid.internal.RemoteProxy;
@@ -34,6 +39,9 @@ import org.openqa.selenium.remote.CapabilityType;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -113,6 +121,11 @@ public class CustomServlet extends RegistryBasedServlet {
         if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("getNewSessionDisabledProxies")) {
           res.add("getNewSessionDisabledProxies", getNewSessionDisabledProxies());
         }
+
+        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("bashCommandToFarmNode")) {
+          res.add("bashCommandToFarmNode", bashCommandToFarmNode(keysToReturn));
+        }
+
       }
     } catch (Exception e) {
       res.remove("success");
@@ -145,6 +158,56 @@ public class CustomServlet extends RegistryBasedServlet {
     }
     result.addProperty("total", list.size());
     return result;
+  }
+
+  public JsonObject bashCommandToFarmNode(List<String> keysToReturn){
+    JsonObject result = new JsonObject();
+
+    String farmNodeProxyId = keysToReturn.get(1);
+    String farmCommand = keysToReturn.get(2);
+    if(farmNodeProxyId == null || farmCommand == null) {
+      result.addProperty("farmNodeProxyId",farmNodeProxyId);
+      result.addProperty("farmCommand",farmCommand);
+      result.addProperty("status","failed");
+      return  result;
+    }
+
+    URL remoteURL = getRegistry().getProxyById(farmNodeProxyId).getRemoteHost();
+    if(remoteURL == null){
+      result.addProperty("remoteURL","not found");
+      result.addProperty("status","failed");
+      return  result;
+    }
+
+    StringBuilder farmRequest = new StringBuilder();
+    farmRequest.append("http://").append(remoteURL.getHost()).append(":").append(remoteURL.getPort());
+    farmRequest.append("/extra/NodeCmdServlet?configuration=bash,-c,");
+    try {
+      farmRequest.append(URLEncoder.encode(keysToReturn.get(2),"UTF-8"));
+    } catch (UnsupportedEncodingException e) {
+      result.addProperty("commandEncodeError",e.getMessage());
+      result.addProperty("status","failed");
+      return  result;
+    }
+    result = sendHttpGet(farmRequest.toString());
+    result.addProperty("farmRequest", farmRequest.toString());
+    return result;
+  }
+
+  public static JsonObject sendHttpGet(String request) {
+    JsonObject result = new JsonObject();
+    try {
+      CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+      HttpGet httpGet = new HttpGet(request);
+      CloseableHttpResponse response = httpClient.execute(httpGet);
+      //System.out.println(EntityUtils.toString(response.getEntity()));
+      return new JsonParser().parse(EntityUtils.toString(response.getEntity())).getAsJsonObject();
+    } catch (Exception e) {
+      //System.out.println("CustomServlet, sendHttpGet error: " + e.getMessage());
+      result.addProperty("farmRequest", request);
+      result.addProperty("sendHttpGetError", e.getMessage());
+      return result;
+    }
   }
 
   private JsonObject getBrowserSlotCounts() {

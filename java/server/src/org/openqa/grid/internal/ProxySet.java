@@ -54,10 +54,12 @@ public class ProxySet implements Iterable<RemoteProxy> {
 
   public void disableNewSessionToProxy(String proxyId){
     newSessionDisabledProxies.add(proxyId);
+    log.info(proxyId + " added to newSessionDisabledProxies");
   }
 
   public void enableNewSessionToProxy(String proxyId){
     newSessionDisabledProxies.remove(proxyId);
+    log.info(proxyId + " removed from newSessionDisabledProxies");
   }
 
   public List<String> getNewSessionDisabledProxies(){
@@ -166,7 +168,6 @@ public class ProxySet implements Iterable<RemoteProxy> {
 
     for (RemoteProxy proxy : sorted) {
 
-      log.info("Found proxy with id: " + proxy.getId());
       if( newSessionDisabledProxies.contains(proxy.getId()) ){
         log.info("proxy "+proxy.getId()+" is in the newSessionDisabledProxies list, new session will not be assigned");
         continue;
