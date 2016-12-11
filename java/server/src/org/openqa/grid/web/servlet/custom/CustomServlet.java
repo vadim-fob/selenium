@@ -160,9 +160,8 @@ public class CustomServlet extends RegistryBasedServlet {
     return result;
   }
 
-  public JsonObject bashCommandToFarmNode(List<String> keysToReturn){
+  private JsonObject bashCommandToFarmNode(List<String> keysToReturn){
     JsonObject result = new JsonObject();
-
     String farmNodeProxyId = keysToReturn.get(1);
     String farmCommand = keysToReturn.get(2);
     if(farmNodeProxyId == null || farmCommand == null) {
@@ -183,7 +182,7 @@ public class CustomServlet extends RegistryBasedServlet {
     farmRequest.append("http://").append(remoteURL.getHost()).append(":").append(remoteURL.getPort());
     farmRequest.append("/extra/NodeCmdServlet?configuration=bash,-c,");
     try {
-      farmRequest.append(URLEncoder.encode(keysToReturn.get(2),"UTF-8"));
+      farmRequest.append(URLEncoder.encode(farmCommand,"UTF-8"));
     } catch (UnsupportedEncodingException e) {
       result.addProperty("commandEncodeError",e.getMessage());
       result.addProperty("status","failed");
@@ -194,7 +193,7 @@ public class CustomServlet extends RegistryBasedServlet {
     return result;
   }
 
-  public static JsonObject sendHttpGet(String request) {
+  private static JsonObject sendHttpGet(String request) {
     JsonObject result = new JsonObject();
     try {
       CloseableHttpClient httpClient = HttpClientBuilder.create().build();

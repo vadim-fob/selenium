@@ -39,9 +39,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.DesiredCapabilities;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
@@ -66,7 +64,7 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
 
   public static final int DEFAULT_POLLING_INTERVAL = 10000;
   public static final int DEFAULT_UNREGISTER_DELAY = 60000;
-  public static final int DEFAULT_DOWN_POLLING_LIMIT = 2;
+  public static final int DEFAULT_DOWN_POLLING_LIMIT = 20;
 
   private volatile int pollingInterval = DEFAULT_POLLING_INTERVAL;
   private volatile int unregisterDelay = DEFAULT_UNREGISTER_DELAY;
@@ -254,57 +252,56 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
   }
 
   public void afterSession(TestSession session) {
-    // nothing to do here in this default implementation
-    LOG.warning(" we are in DefaultRemoteProxy afterSession method.. disableNewSessionForProxy here.. ");
-    LOG.warning(" proxyId: " + getId());
 
-    String farmNodeAddressParameter = getConfig().custom.get("farmNodeAddress");
-    LOG.warning(" farmNodeParameter: " + farmNodeAddressParameter);
-
-    String farmNodeAddress = getRegistry().getProxyById("http://"+farmNodeAddressParameter).getRemoteHost().toString();
-    LOG.warning("farm node remote host: " + farmNodeAddress);
-
-    for(DesiredCapabilities dc : this.getConfig().capabilities){
-      if(dc.getBrowserName().equalsIgnoreCase("android")){
-        String browserName = dc.getBrowserName();
-        LOG.warning("grid node getConfig().capabilities browserName:" + browserName);
-      }
+    if(session.getExternalKey() == null) {
+      LOG.info("session "+ session.toString() + " is not connected to remote. Skip after session");
+      return;
     }
 
-    String request = "";
     try {
-      request = farmNodeAddress + "/extra/NodeCmdServlet?configuration=" + "runScript," + URLEncoder.encode("/restart-appium-android.sh", "UTF-8");
-      LOG.info("prepared request: "+request);
-    } catch (UnsupportedEncodingException e) {
-      LOG.warning("after session, farm request encode error: "+ e.getMessage());
+      String browserName = session.getSlot().getCapabilities().get("browserName").toString().toLowerCase();
+      if( !(browserName.equals("android") || browserName.equals("ios")) ) {
+        LOG.info("session "+ session.toString() + " browser name is " + browserName + ". Skip after session");
+        return;
+      }
+
+    //TODO: config ,custom, get docker container name and pm2 process name, for Android
+    //TODO: config, custom, get pm2 process name, for IOS
+
+      LOG.info(" afterSession started");
+      LOG.info(" session proxyId: " + getId());
+      LOG.info("session slot remote url: "+ session.getSlot().getRemoteURL());    // http://172.17.0.6:4723/wd/hub
+      LOG.info(" test slot browserName:" + browserName);
+      String farmNodeAddressParameter = getConfig().custom.get("farmNodeAddress");
+      LOG.info(" farmNodeParameter: " + farmNodeAddressParameter);
+      String farmNodeAddress = getRegistry().getProxyById("http://"+farmNodeAddressParameter).getRemoteHost().toString();
+      LOG.info(" farm node remote host: " + farmNodeAddress);
+
+      String request = farmNodeAddress + "/extra/NodeCmdServlet?configuration=" + "runScript," + URLEncoder.encode("/restart-appium-"+ browserName +".sh", "UTF-8");
+      LOG.info(" prepared request: "+request);
+      LOG.info(" disableNewSessionToProxy .." + getId());
+      getRegistry().getAllProxies().disableNewSessionToProxy(getId());
+      runRestartAppium(session, request);
+
+    } catch (Exception e) {
+      LOG.warning(" after session event error: "+ e.getMessage());
     }
-
-    // LOG.warning("session slot remote url: "+ session.getSlot().getRemoteURL());    // http://172.17.0.6:4723/wd/hub
-    // LOG.warning("session slot proxy remote host: " + session.getSlot().getProxy().getRemoteHost());  // http://172.17.0.6:4723
-    LOG.warning(" current session from registry: " + getRegistry().getSession(session.getExternalKey()).toString());
-
-    LOG.warning(" disableNewSessionToProxy .." + getId());
-    getRegistry().getAllProxies().disableNewSessionToProxy(getId());
-    customAfterSession(session,request);
   }
 
-  public void customAfterSession(TestSession session, String request) {
+  private void runRestartAppium(TestSession session, String request) {
     new Thread(new Runnable() {
       public void run() {
-        restartOurThings(session,request);
+        restartAppium(session, request);
       }
     }).start();
   }
 
-  private void restartOurThings(TestSession session, String request){
-    LOG.warning(" restart things in new thread ..");
-    LOG.warning(" check that session is not alive in registry ..");
-
+  private void restartAppium(TestSession session, String request){
+    LOG.warning(" check that session has no ext key in registry ..");
     int times = 60;
-    boolean sessionAlive = true;
-    while(sessionAlive || times == 0){
-      if(getRegistry().getSession(session.getExternalKey()) == null) {sessionAlive = false;}
+    while(times != 0 || getRegistry().getSession(session.getExternalKey()) != null){
       try {
+        //TODO: try without sleep
         Thread.sleep(1000);
       } catch (InterruptedException e) {
         e.printStackTrace();
@@ -312,13 +309,11 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
       times--;
     }
 
-    //TODO: send http to farm node
-    LOG.info("trying to send http get request...");
+    LOG.info(" send http get restart request...");
     sendHttpGet(request);
-
-    LOG.warning(" enableNewSessionToProxy .." + getId());
+    LOG.info(" enableNewSessionToProxy " + getId());
     getRegistry().getAllProxies().enableNewSessionToProxy(getId());
-    LOG.warning(" restartOurThings is finished ..");
+    LOG.info(" restart is finished");
   }
 
   private void sendHttpGet(String request){
@@ -326,8 +321,7 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
       CloseableHttpClient httpClient = HttpClientBuilder.create().build();
       HttpGet httpGet = new HttpGet(request);
       CloseableHttpResponse response = httpClient.execute(httpGet);
-      LOG.info("http get response: "+ EntityUtils.toString(response.getEntity()));
-      LOG.info("DefaultRemoteProxy sendHttpGet done");
+      LOG.info(" http get response: "+ EntityUtils.toString(response.getEntity()));
     } catch (Exception e){
       LOG.warning("DefaultRemoteProxy sendHttpGet failed: "+ e.getMessage());
     }
