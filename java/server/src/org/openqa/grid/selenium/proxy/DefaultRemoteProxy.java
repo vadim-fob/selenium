@@ -39,6 +39,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
+import org.openqa.selenium.remote.DesiredCapabilities;
 
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -62,9 +63,9 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
 
   private static final Logger LOG = Logger.getLogger(DefaultRemoteProxy.class.getName());
 
-  public static final int DEFAULT_POLLING_INTERVAL = 10000;
+  public static final int DEFAULT_POLLING_INTERVAL = 120000;
   public static final int DEFAULT_UNREGISTER_DELAY = 60000;
-  public static final int DEFAULT_DOWN_POLLING_LIMIT = 20;
+  public static final int DEFAULT_DOWN_POLLING_LIMIT = 2;
 
   private volatile int pollingInterval = DEFAULT_POLLING_INTERVAL;
   private volatile int unregisterDelay = DEFAULT_UNREGISTER_DELAY;
@@ -200,6 +201,14 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
     if (down) {
       return null;
     }
+
+    // TODO: temporary workaround, farm-node should not get new session
+      for(DesiredCapabilities dc : getConfig().capabilities){
+        if(dc.getBrowserName().equalsIgnoreCase("farm-node")){
+          return null;
+        }
+      }
+
     return super.getNewSession(requestedCapability);
   }
 
@@ -253,14 +262,15 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
 
   public void afterSession(TestSession session) {
 
-    if(session.getExternalKey() == null) {
+    // TODO: if no remote, anyway do make restart, don't skip aftersession
+/*    if(session.getExternalKey() == null) {
       LOG.info("session "+ session.toString() + " is not connected to remote. Skip after session");
       return;
-    }
+    }*/
 
     try {
       String browserName = session.getSlot().getCapabilities().get("browserName").toString().toLowerCase();
-      if( !(browserName.equals("android") || browserName.equals("ios")) ) {
+      if( !(browserName.equals("android") || browserName.equals("iphone")) ) {
         LOG.info("session "+ session.toString() + " browser name is " + browserName + ". Skip after session");
         return;
       }
@@ -297,16 +307,21 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
   }
 
   private void restartAppium(TestSession session, String request){
-    LOG.warning(" check that session has no ext key in registry ..");
     int times = 60;
-    while(times != 0 || getRegistry().getSession(session.getExternalKey()) != null){
-      try {
-        //TODO: try without sleep
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
+    boolean ready = false;
+    LOG.warning(" check if session has no ext key in registry ..");
+    if(session.getExternalKey() != null) {
+      while (!ready) {
+        try {
+          if(getRegistry().getSession(session.getExternalKey()) == null) { ready = true;}
+          if(times == 0) { ready = true;}
+
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        times--;
       }
-      times--;
     }
 
     LOG.info(" send http get restart request...");

@@ -210,8 +210,6 @@ public class TestSlot {
   }
 
   boolean performAfterSessionEvent() {
-    log.warning("performAfterSessionEvent starting...");
-
     // run the pre-release listener
     try {
       if (proxy instanceof TestSessionListener) {
@@ -219,7 +217,6 @@ public class TestSlot {
           log.warning("WARNING : using a afterSession on a proxy that can support multiple tests is risky.");
           showWarning = false;
         }
-        log.warning("performAfterSessionEvent , current proxy is instanceof TestSessionListener...");
         ((TestSessionListener) proxy).afterSession(currentSession);
       }
     } catch (Throwable t) {
