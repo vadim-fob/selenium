@@ -124,6 +124,16 @@ public class ConsoleServlet extends RegistryBasedServlet {
     List<String> nodes = new ArrayList<>();
     for (RemoteProxy proxy : getRegistry().getAllProxies()) {
       HtmlRenderer beta = new WebProxyHtmlRendererBeta(proxy);
+
+      // TODO: temporary workaround, don't display farm-node in console
+      boolean farmNodeProxy = false;
+      for(DesiredCapabilities dc : proxy.getConfig().capabilities){
+        if(dc.getBrowserName().equalsIgnoreCase("farm-node")){
+          farmNodeProxy = true;
+        }
+      }
+
+      if(!farmNodeProxy)
       nodes.add(beta.renderSummary());
     }
 

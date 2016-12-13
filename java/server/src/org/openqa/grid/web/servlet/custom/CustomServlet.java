@@ -110,19 +110,19 @@ public class CustomServlet extends RegistryBasedServlet {
           res.add("browserSlotCounts", getBrowserSlotCounts());
         }
 
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("enableNewSessionToProxy")) {
+        if (keysToReturn != null && keysToReturn.contains("enableNewSessionToProxy")) {
           res.add("enableNewSessionToProxy", enableNewSessionToProxy(keysToReturn.get(1)));
         }
 
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("disableNewSessionToProxy")) {
+        if (keysToReturn != null && keysToReturn.contains("disableNewSessionToProxy")) {
           res.add("disableNewSessionToProxy", disableNewSessionToProxy(keysToReturn.get(1)));
         }
 
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("getNewSessionDisabledProxies")) {
+        if (keysToReturn != null && keysToReturn.contains("getNewSessionDisabledProxies")) {
           res.add("getNewSessionDisabledProxies", getNewSessionDisabledProxies());
         }
 
-        if (keysToReturn == null || keysToReturn.isEmpty() || keysToReturn.contains("bashCommandToFarmNode")) {
+        if (keysToReturn != null && keysToReturn.contains("bashCommandToFarmNode")) {
           res.add("bashCommandToFarmNode", bashCommandToFarmNode(keysToReturn));
         }
 
