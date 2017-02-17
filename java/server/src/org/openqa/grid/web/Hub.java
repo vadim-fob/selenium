@@ -32,6 +32,7 @@ import org.openqa.grid.web.servlet.RegistrationServlet;
 import org.openqa.grid.web.servlet.ResourceServlet;
 import org.openqa.grid.web.servlet.TestSessionStatusServlet;
 import org.openqa.grid.web.servlet.beta.ConsoleServlet;
+import org.openqa.grid.web.servlet.devices.DevicesServlet;
 import org.openqa.grid.web.utils.ExtraServletUtil;
 import org.openqa.selenium.net.NetworkUtils;
 import org.seleniumhq.jetty9.server.HttpConfiguration;
@@ -112,6 +113,8 @@ public class Hub {
     handler.addServlet(HubStatusServlet.class.getName(), "/grid/api/hub/*");
 
     handler.addServlet(CustomServlet.class.getName(), "/grid/api/hub/custom/*");
+
+    handler.addServlet(DevicesServlet.class.getName(), "/grid/api/hub/devices/*");
 
     handler.addServlet(TestSessionStatusServlet.class.getName(), "/grid/api/testsession/*");
 
