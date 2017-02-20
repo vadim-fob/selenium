@@ -35,6 +35,7 @@ public class DefaultCapabilityMatcher implements CapabilityMatcher {
 
   private static final Logger log = Logger.getLogger(DefaultCapabilityMatcher.class.getName());
   private static final String GRID_TOKEN = "_";
+  private static final String DEVICE_NAME_CAPABILITY_KEY = "deviceName";
 
   protected final List<String> toConsider = new ArrayList<>();
 
@@ -54,7 +55,15 @@ public class DefaultCapabilityMatcher implements CapabilityMatcher {
     toConsider.add(capabilityName);
   }
 
-  public boolean matches(Map<String, Object> nodeCapability, Map<String, Object> requestedCapability) {
+  private boolean hasDeviceNameCapability(Map<String, Object> requestedCapability) {
+    if (requestedCapability.get(DEVICE_NAME_CAPABILITY_KEY) != null) {
+      return true;
+    }
+    return false;
+  }
+
+  public boolean matches(Map<String, Object> nodeCapability,
+                         Map<String, Object> requestedCapability) {
     if (nodeCapability == null || requestedCapability == null) {
       return false;
     }
@@ -78,15 +87,38 @@ public class DefaultCapabilityMatcher implements CapabilityMatcher {
                     return false;
                   }
                 }
+                if (hasDeviceNameCapability(requestedCapability)) {
+                  if (requestedCapability
+                    .get(DEVICE_NAME_CAPABILITY_KEY)
+                    .equals(nodeCapability.get(DEVICE_NAME_CAPABILITY_KEY))) {
+                    break;
+                  } else {
+                    return false;
+                  }
+
+                }
                 break;
 
               case CapabilityType.BROWSER_VERSION:
               case CapabilityType.VERSION:
                 // w3c uses 'browserVersion' but 2.X / 3.X use 'version'
                 // w3c name takes precedence
-                Object nodeVersion = nodeCapability.getOrDefault(CapabilityType.BROWSER_VERSION, nodeCapability.get(CapabilityType.VERSION));
+                Object
+                  nodeVersion =
+                  nodeCapability.getOrDefault(CapabilityType.BROWSER_VERSION,
+                                              nodeCapability.get(CapabilityType.VERSION));
                 if (!value.equals(nodeVersion)) {
                   return false;
+                }
+                if (hasDeviceNameCapability(requestedCapability)) {
+                  if (requestedCapability
+                    .get(DEVICE_NAME_CAPABILITY_KEY)
+                    .equals(nodeCapability.get(DEVICE_NAME_CAPABILITY_KEY))) {
+                    break;
+                  } else {
+                    return false;
+                  }
+
                 }
                 break;
 
@@ -117,8 +149,9 @@ public class DefaultCapabilityMatcher implements CapabilityMatcher {
       }
       for (Platform os : Platform.values()) {
         for (String matcher : os.getPartOfOsName()) {
-          if ("".equals(matcher))
+          if ("".equals(matcher)) {
             continue;
+          }
           if (name.equalsIgnoreCase(matcher)) {
             return os;
           }
